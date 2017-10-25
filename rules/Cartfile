@@ -1,0 +1,5 @@
+
+github "Quick/Quick" == 1.1.0
+github "Quick/Nimble" == 7.0.1
+
+github "dydus0x14/Bender" "feature/support_xcode9"
