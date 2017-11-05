@@ -7,15 +7,18 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		2709A1461FAFB69C00C1D5DB /* five_megs.json in Resources */ = {isa = PBXBuildFile; fileRef = 2709A1451FAFB69C00C1D5DB /* five_megs.json */; };
+		2709A1471FAFB77500C1D5DB /* ConcurrentPrimitives.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2737D6651FA9E60800CCDBE2 /* ConcurrentPrimitives.swift */; };
+		2737D6661FA9E60800CCDBE2 /* ConcurrentPrimitives.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2737D6651FA9E60800CCDBE2 /* ConcurrentPrimitives.swift */; };
 		27F3DE2D1FA12CAF00AD8EBF /* rules.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 27F3DE231FA12CAF00AD8EBF /* rules.framework */; };
 		27F3DE321FA12CAF00AD8EBF /* rulesTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 27F3DE311FA12CAF00AD8EBF /* rulesTests.swift */; };
 		27F3DE341FA12CAF00AD8EBF /* rules.h in Headers */ = {isa = PBXBuildFile; fileRef = 27F3DE261FA12CAF00AD8EBF /* rules.h */; settings = {ATTRIBUTES = (Public, ); }; };
-		27F3DE3E1FA12CBE00AD8EBF /* rules.swift in Sources */ = {isa = PBXBuildFile; fileRef = 27F3DE3D1FA12CBE00AD8EBF /* rules.swift */; };
-		27F3DE3F1FA12CBE00AD8EBF /* rules.swift in Sources */ = {isa = PBXBuildFile; fileRef = 27F3DE3D1FA12CBE00AD8EBF /* rules.swift */; };
 		27F3DE421FA12DA000AD8EBF /* Bender.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 27F3DE411FA12DA000AD8EBF /* Bender.framework */; };
 		27F3DE451FA12DB200AD8EBF /* Nimble.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 27F3DE431FA12DB200AD8EBF /* Nimble.framework */; };
 		27F3DE461FA12DB200AD8EBF /* Quick.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 27F3DE441FA12DB200AD8EBF /* Quick.framework */; };
 		27F3DE491FA12E2D00AD8EBF /* Bender.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 27F3DE411FA12DA000AD8EBF /* Bender.framework */; };
+		27F3DE4B1FA12EB800AD8EBF /* ConcurrentArrayRule.swift in Sources */ = {isa = PBXBuildFile; fileRef = 27F3DE4A1FA12EB800AD8EBF /* ConcurrentArrayRule.swift */; };
+		27F3DE4C1FA12EB800AD8EBF /* ConcurrentArrayRule.swift in Sources */ = {isa = PBXBuildFile; fileRef = 27F3DE4A1FA12EB800AD8EBF /* ConcurrentArrayRule.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -41,16 +44,18 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		2709A1451FAFB69C00C1D5DB /* five_megs.json */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.json; name = five_megs.json; path = rules/five_megs.json; sourceTree = SOURCE_ROOT; };
+		2737D6651FA9E60800CCDBE2 /* ConcurrentPrimitives.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConcurrentPrimitives.swift; sourceTree = "<group>"; };
 		27F3DE231FA12CAF00AD8EBF /* rules.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = rules.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		27F3DE261FA12CAF00AD8EBF /* rules.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = rules.h; sourceTree = "<group>"; };
 		27F3DE271FA12CAF00AD8EBF /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		27F3DE2C1FA12CAF00AD8EBF /* rulesTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = rulesTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		27F3DE311FA12CAF00AD8EBF /* rulesTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = rulesTests.swift; sourceTree = "<group>"; };
 		27F3DE331FA12CAF00AD8EBF /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
-		27F3DE3D1FA12CBE00AD8EBF /* rules.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = rules.swift; sourceTree = "<group>"; };
 		27F3DE411FA12DA000AD8EBF /* Bender.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Bender.framework; path = Carthage/Build/iOS/Bender.framework; sourceTree = "<group>"; };
 		27F3DE431FA12DB200AD8EBF /* Nimble.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Nimble.framework; path = Carthage/Build/iOS/Nimble.framework; sourceTree = "<group>"; };
 		27F3DE441FA12DB200AD8EBF /* Quick.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Quick.framework; path = Carthage/Build/iOS/Quick.framework; sourceTree = "<group>"; };
+		27F3DE4A1FA12EB800AD8EBF /* ConcurrentArrayRule.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConcurrentArrayRule.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -100,7 +105,8 @@
 			children = (
 				27F3DE261FA12CAF00AD8EBF /* rules.h */,
 				27F3DE271FA12CAF00AD8EBF /* Info.plist */,
-				27F3DE3D1FA12CBE00AD8EBF /* rules.swift */,
+				27F3DE4A1FA12EB800AD8EBF /* ConcurrentArrayRule.swift */,
+				2737D6651FA9E60800CCDBE2 /* ConcurrentPrimitives.swift */,
 			);
 			path = rules;
 			sourceTree = "<group>";
@@ -110,6 +116,7 @@
 			children = (
 				27F3DE311FA12CAF00AD8EBF /* rulesTests.swift */,
 				27F3DE331FA12CAF00AD8EBF /* Info.plist */,
+				2709A1451FAFB69C00C1D5DB /* five_megs.json */,
 			);
 			path = rulesTests;
 			sourceTree = "<group>";
@@ -227,6 +234,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				2709A1461FAFB69C00C1D5DB /* five_megs.json in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -256,7 +264,8 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				27F3DE3E1FA12CBE00AD8EBF /* rules.swift in Sources */,
+				2737D6661FA9E60800CCDBE2 /* ConcurrentPrimitives.swift in Sources */,
+				27F3DE4B1FA12EB800AD8EBF /* ConcurrentArrayRule.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -264,8 +273,9 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				2709A1471FAFB77500C1D5DB /* ConcurrentPrimitives.swift in Sources */,
 				27F3DE321FA12CAF00AD8EBF /* rulesTests.swift in Sources */,
-				27F3DE3F1FA12CBE00AD8EBF /* rules.swift in Sources */,
+				27F3DE4C1FA12EB800AD8EBF /* ConcurrentArrayRule.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -414,7 +424,7 @@
 				PRODUCT_NAME = "$(TARGET_NAME:c99extidentifier)";
 				SKIP_INSTALL = YES;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
-				SWIFT_VERSION = 4.0;
+				SWIFT_VERSION = 3.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Debug;
@@ -439,7 +449,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = com.dydus.rules.rules;
 				PRODUCT_NAME = "$(TARGET_NAME:c99extidentifier)";
 				SKIP_INSTALL = YES;
-				SWIFT_VERSION = 4.0;
+				SWIFT_VERSION = 3.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Release;
