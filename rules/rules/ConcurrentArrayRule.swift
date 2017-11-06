@@ -30,10 +30,10 @@ import Bender
 
 /**
     Validator for arrays of items of type T, that should be validated by rule of type R, i.e. where R.V == T.
+    This is an improved version of ArrayRule and allows to proceed array items separately on background thread.
  */
 public class ConcurrentArrayRule<T, R: Rule>: Rule where R.V == T {
     public typealias V = [T]
-    typealias ValidateClosure = (AnyObject) throws -> T
     fileprivate var itemRule: R
     
     /**
@@ -45,13 +45,44 @@ public class ConcurrentArrayRule<T, R: Rule>: Rule where R.V == T {
         self.itemRule = itemRule
     }
     
-    open func validate<K: Future>(_ jsonValue: AnyObject) -> K where K.T == T {
-        let validator: (AnyObject) throws->T = { [unowned self] jsonObject in
-            return try self.itemRule.validate(jsonObject)
+    /**
+     Starts JSON array validation and returns Future if succeeded. Validation throws if jsonValue is not a JSON array.
+     
+     - parameter jsonValue: JSON array to be validated and converted into [T]
+     
+     - throws: throws RuleError
+     
+     - returns: Future object to get value or cancel execution.
+     */
+    open func startValidate<K: Future>(_ jsonValue: AnyObject) throws -> K where K.T == T {
+        guard let jsonArray = jsonValue as? NSArray else {
+            throw RuleError.invalidJSONType("Value of unexpected type found: \"\(jsonValue)\". Expected array of \(T.self).", nil)
         }
-        return ConcurrentArrayRuleFuture<V, T>(jsonValue, validator) as! K
+
+        let validator: (Any) throws->T = { [unowned self] jsonObject in
+            return try self.itemRule.validate(jsonObject as AnyObject)
+        }
+        
+        return ConcurrentArrayRuleFuture<NSArray, [T]>(jsonArray, validator) as! K
+    }
+    
+    /**
+     Starts array of AnyObject type dump.
+     
+     - parameter value: array with items of type T
+     
+     - throws: ?
+     
+     - returns: returns Future object to get result or cancel execution.
+     */
+    open func startDump<K: Future>(_ value: V) throws -> K where K.T == AnyObject {
+        let dump: (T) throws->AnyObject = { [unowned self] value in
+            return try self.itemRule.dump(value)
+        }
+        return ConcurrentArrayRuleFuture<[T], [AnyObject]>(value, dump) as! K
     }
 
+    // MARK:- Rule
     /**
      Validates JSON array and returns [T] if succeeded. Validation throws if jsonValue is not a JSON array or if item rule throws for any item.
      
@@ -62,12 +93,17 @@ public class ConcurrentArrayRule<T, R: Rule>: Rule where R.V == T {
      - returns: array of objects of first generic parameter argument if validation was successful
      */
     open func validate(_ jsonValue: AnyObject) throws -> V {
-        let validator: (AnyObject) throws->T = { [unowned self] jsonObject in
-            return try self.itemRule.validate(jsonObject)
+        guard let jsonArray = jsonValue as? NSArray else {
+            throw RuleError.invalidJSONType("Value of unexpected type found: \"\(jsonValue)\". Expected array of \(T.self).", nil)
         }
-        return try ConcurrentArrayRuleFuture<V, T>(jsonValue, validator).get()
+        
+        let validator: (Any) throws->T = { [unowned self] jsonObject in
+            return try self.itemRule.validate(jsonObject as AnyObject)
+        }
+        
+        return try ConcurrentArrayRuleFuture<NSArray, [T]>(jsonArray, validator).get()
     }
-    
+
     /**
      Dumps array of AnyObject type in case of success. Throws if cannot dump any item in source array.
      
@@ -78,75 +114,67 @@ public class ConcurrentArrayRule<T, R: Rule>: Rule where R.V == T {
      - returns: returns array of AnyObject, dumped by item rule
      */
     open func dump(_ value: V) throws -> AnyObject {
-        var array = [AnyObject]()
-        for (index, t) in value.enumerated() {
-            try autoreleasepool {
-                do {
-                    array.append(try itemRule.dump(t))
-                } catch let err as RuleError {
-                    throw RuleError.invalidDump("Unable to dump array of \(T.self): item #\(index) could not be dumped.", err)
-                }
-            }
+        let dump: (T) throws->AnyObject = { [unowned self] value in
+            return try self.itemRule.dump(value)
         }
-        return array as AnyObject
+        return try ConcurrentArrayRuleFuture<[T], [AnyObject]>(value, dump).get() as AnyObject
     }
 }
 
+
 /**
-    The executor of concurrent validation process. All items are run in async background queue.
+    The executor of concurrent validation and dumping process. All items are run in async background queue.
     To increase performance this implementation does not guarantee the order of the elements in the result array.
+    There is no error handling for failed items yet.
  */
-public class ConcurrentArrayRuleFuture<T: Collection, V>: Future where T.Element == V  {
-    fileprivate var result = [V]()
+public class ConcurrentArrayRuleFuture<ICollection: Sequence, OCollection: Sequence>: Future {
+    
+    public typealias T = [OCollection.Element]
+    
+    fileprivate var result = [OCollection.Element]()
     fileprivate var error: Error?
-    fileprivate let validateQueue: OperationQueue
-    fileprivate let writeQueue: OperationQueue
+    fileprivate let operationQueue: OperationQueue
+    fileprivate let semaphore: DispatchSemaphore
     public var isCancelled: Bool = false
     public var isDone: Bool {
-        return validateQueue.operationCount == 0 && writeQueue.operationCount == 0
+        return operationQueue.operationCount == 0
     }
     
-    init(_ jsonValue: AnyObject, _ validate: @escaping (AnyObject) throws->V) {
-        validateQueue = OperationQueue()
-        validateQueue.maxConcurrentOperationCount = 4 // OperationQueue.defaultMaxConcurrentOperationCount
-        validateQueue.qualityOfService = .utility
+    init(_ input: ICollection, _ itemExecutor: @escaping (ICollection.Element) throws->OCollection.Element) {
+        operationQueue = OperationQueue()
+        operationQueue.maxConcurrentOperationCount = 5 // OperationQueue.defaultMaxConcurrentOperationCount
+        operationQueue.qualityOfService = .utility
         
-        writeQueue = OperationQueue()
-        writeQueue.maxConcurrentOperationCount = 1
-        writeQueue.qualityOfService = .utility
+        semaphore = DispatchSemaphore(value: 1)
         
-        perform(jsonValue, validate)
+        perform(input, itemExecutor)
     }
     
     public func get() throws -> T {
-        validateQueue.waitUntilAllOperationsAreFinished()
-        return result as! T
+        operationQueue.waitUntilAllOperationsAreFinished()
+        return result
     }
     
     public func cancel() {
         isCancelled = true
-        validateQueue.cancelAllOperations()
-        writeQueue.cancelAllOperations()
+        operationQueue.cancelAllOperations()
     }
     
-    fileprivate func perform(_ jsonValue: AnyObject, _ validate: @escaping (AnyObject) throws ->V) {
-        guard let jsonArray = jsonValue as? NSArray else {
-            self.error = RuleError.invalidJSONType("Value of unexpected type found: \"\(jsonValue)\". Expected array of \(T.self).", nil)
-            return
-        }
-        
-        for object in jsonArray {
+    fileprivate func perform(_ input: ICollection, _ itemExecutor: @escaping (ICollection.Element) throws->OCollection.Element) {
+        for object in input {
             let op = BlockOperation(block: { [weak self] in
                 do {
-                    let value = try validate(object as AnyObject)
-                    self?.writeQueue.addOperation { self?.result.append(value) }
+                    try autoreleasepool {
+                        let value = try itemExecutor(object)
+                        self?.semaphore.wait()
+                        self?.result.append(value)
+                        self?.semaphore.signal()
+                    }
                 } catch _ {
                     // TODO: Handle error
                 }
             })
-            validateQueue.addOperation(op)
+            operationQueue.addOperation(op)
         }
     }
 }
-
-
