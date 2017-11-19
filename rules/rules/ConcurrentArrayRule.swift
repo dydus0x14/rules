@@ -142,7 +142,7 @@ public class ConcurrentArrayRuleFuture<ICollection: Sequence, OCollection: Seque
     
     init(_ input: ICollection, _ itemExecutor: @escaping (ICollection.Element) throws->OCollection.Element) {
         operationQueue = OperationQueue()
-        operationQueue.maxConcurrentOperationCount = 5 // OperationQueue.defaultMaxConcurrentOperationCount
+        operationQueue.maxConcurrentOperationCount = 4 // OperationQueue.defaultMaxConcurrentOperationCount
         operationQueue.qualityOfService = .utility
         
         semaphore = DispatchSemaphore(value: 1)
@@ -161,20 +161,31 @@ public class ConcurrentArrayRuleFuture<ICollection: Sequence, OCollection: Seque
     }
     
     fileprivate func perform(_ input: ICollection, _ itemExecutor: @escaping (ICollection.Element) throws->OCollection.Element) {
-        for object in input {
-            let op = BlockOperation(block: { [weak self] in
+        let amountOfOperations = operationQueue.maxConcurrentOperationCount
+        var blockOperation: BlockOperation!
+    
+        for (index, object) in input.enumerated() {
+            if index % amountOfOperations == 0 {
+                blockOperation = BlockOperation()
+            }
+            blockOperation.addExecutionBlock { [weak self] in
                 do {
-                    try autoreleasepool {
-                        let value = try itemExecutor(object)
-                        self?.semaphore.wait()
-                        self?.result.append(value)
-                        self?.semaphore.signal()
-                    }
-                } catch _ {
-                    // TODO: Handle error
+                    let value = try itemExecutor(object)
+                    self?.semaphore.wait()
+                    self?.result.append(value)
+                    self?.semaphore.signal()
+                } catch let error {
+                    print(error)
                 }
-            })
-            operationQueue.addOperation(op)
+            }
+            if (index + 1) % amountOfOperations == 0 {
+                operationQueue.addOperation(blockOperation)
+                blockOperation = nil
+            }
+        }
+        
+        if blockOperation != nil {
+            operationQueue.addOperation(blockOperation)
         }
     }
 }

@@ -23,6 +23,11 @@
 		27602D421FB85D1C00DF2157 /* five_megs.json in Resources */ = {isa = PBXBuildFile; fileRef = 2709A1451FAFB69C00C1D5DB /* five_megs.json */; };
 		27602D441FB85D3A00DF2157 /* RulesExample.swift in Sources */ = {isa = PBXBuildFile; fileRef = 27602D431FB85D3A00DF2157 /* RulesExample.swift */; };
 		27602D451FB85D3A00DF2157 /* RulesExample.swift in Sources */ = {isa = PBXBuildFile; fileRef = 27602D431FB85D3A00DF2157 /* RulesExample.swift */; };
+		27AEBA4D1FBCB9F300E7C44C /* FolderRule.swift in Sources */ = {isa = PBXBuildFile; fileRef = 27AEBA4C1FBCB9F300E7C44C /* FolderRule.swift */; };
+		27AEBA4F1FBCB9FE00E7C44C /* folders.json in Resources */ = {isa = PBXBuildFile; fileRef = 27AEBA4E1FBCB9FE00E7C44C /* folders.json */; };
+		27AEBA511FBCC19500E7C44C /* ISO8601DateRule.swift in Sources */ = {isa = PBXBuildFile; fileRef = 27AEBA501FBCC19500E7C44C /* ISO8601DateRule.swift */; };
+		27AEBA521FBCC19500E7C44C /* ISO8601DateRule.swift in Sources */ = {isa = PBXBuildFile; fileRef = 27AEBA501FBCC19500E7C44C /* ISO8601DateRule.swift */; };
+		27AEBA531FBCC19500E7C44C /* ISO8601DateRule.swift in Sources */ = {isa = PBXBuildFile; fileRef = 27AEBA501FBCC19500E7C44C /* ISO8601DateRule.swift */; };
 		27B399301FB0B578003A574D /* ConcurrentClassRule.swift in Sources */ = {isa = PBXBuildFile; fileRef = 27B3992F1FB0B578003A574D /* ConcurrentClassRule.swift */; };
 		27B399311FB0B578003A574D /* ConcurrentClassRule.swift in Sources */ = {isa = PBXBuildFile; fileRef = 27B3992F1FB0B578003A574D /* ConcurrentClassRule.swift */; };
 		27F3DE2D1FA12CAF00AD8EBF /* rules.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 27F3DE231FA12CAF00AD8EBF /* rules.framework */; };
@@ -79,6 +84,9 @@
 		27602D341FB85C3C00DF2157 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/LaunchScreen.storyboard; sourceTree = "<group>"; };
 		27602D361FB85C3C00DF2157 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		27602D431FB85D3A00DF2157 /* RulesExample.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RulesExample.swift; sourceTree = "<group>"; };
+		27AEBA4C1FBCB9F300E7C44C /* FolderRule.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolderRule.swift; sourceTree = "<group>"; };
+		27AEBA4E1FBCB9FE00E7C44C /* folders.json */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.json; path = folders.json; sourceTree = "<group>"; };
+		27AEBA501FBCC19500E7C44C /* ISO8601DateRule.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ISO8601DateRule.swift; sourceTree = "<group>"; };
 		27B3992F1FB0B578003A574D /* ConcurrentClassRule.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConcurrentClassRule.swift; sourceTree = "<group>"; };
 		27F3DE231FA12CAF00AD8EBF /* rules.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = rules.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		27F3DE261FA12CAF00AD8EBF /* rules.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = rules.h; sourceTree = "<group>"; };
@@ -126,8 +134,10 @@
 		27602D291FB85C3C00DF2157 /* rulesDemo */ = {
 			isa = PBXGroup;
 			children = (
+				27AEBA4E1FBCB9FE00E7C44C /* folders.json */,
 				27602D2A1FB85C3C00DF2157 /* AppDelegate.swift */,
 				27602D2C1FB85C3C00DF2157 /* ViewController.swift */,
+				27AEBA4C1FBCB9F300E7C44C /* FolderRule.swift */,
 				27602D2E1FB85C3C00DF2157 /* Main.storyboard */,
 				27602D311FB85C3C00DF2157 /* Assets.xcassets */,
 				27602D331FB85C3C00DF2157 /* LaunchScreen.storyboard */,
@@ -165,6 +175,7 @@
 				2737D6651FA9E60800CCDBE2 /* ConcurrentPrimitives.swift */,
 				27F3DE4A1FA12EB800AD8EBF /* ConcurrentArrayRule.swift */,
 				27B3992F1FB0B578003A574D /* ConcurrentClassRule.swift */,
+				27AEBA501FBCC19500E7C44C /* ISO8601DateRule.swift */,
 			);
 			path = rules;
 			sourceTree = "<group>";
@@ -313,6 +324,7 @@
 				27602D351FB85C3C00DF2157 /* LaunchScreen.storyboard in Resources */,
 				27602D321FB85C3C00DF2157 /* Assets.xcassets in Resources */,
 				27602D301FB85C3C00DF2157 /* Main.storyboard in Resources */,
+				27AEBA4F1FBCB9FE00E7C44C /* folders.json in Resources */,
 				27602D421FB85D1C00DF2157 /* five_megs.json in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -358,8 +370,10 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				27AEBA531FBCC19500E7C44C /* ISO8601DateRule.swift in Sources */,
 				27602D2D1FB85C3C00DF2157 /* ViewController.swift in Sources */,
 				27602D3B1FB85CCA00DF2157 /* ConcurrentClassRule.swift in Sources */,
+				27AEBA4D1FBCB9F300E7C44C /* FolderRule.swift in Sources */,
 				27602D451FB85D3A00DF2157 /* RulesExample.swift in Sources */,
 				27602D3C1FB85CCC00DF2157 /* ConcurrentPrimitives.swift in Sources */,
 				27602D2B1FB85C3C00DF2157 /* AppDelegate.swift in Sources */,
@@ -371,6 +385,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				27AEBA511FBCC19500E7C44C /* ISO8601DateRule.swift in Sources */,
 				2737D6661FA9E60800CCDBE2 /* ConcurrentPrimitives.swift in Sources */,
 				27F3DE4B1FA12EB800AD8EBF /* ConcurrentArrayRule.swift in Sources */,
 				27B399301FB0B578003A574D /* ConcurrentClassRule.swift in Sources */,
@@ -385,6 +400,7 @@
 				27B399311FB0B578003A574D /* ConcurrentClassRule.swift in Sources */,
 				27F3DE321FA12CAF00AD8EBF /* PerformanceRulesTests.swift in Sources */,
 				27602D441FB85D3A00DF2157 /* RulesExample.swift in Sources */,
+				27AEBA521FBCC19500E7C44C /* ISO8601DateRule.swift in Sources */,
 				27F3DE4C1FA12EB800AD8EBF /* ConcurrentArrayRule.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

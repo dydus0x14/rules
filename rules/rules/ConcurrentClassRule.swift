@@ -200,7 +200,7 @@ class ConcurrentClassRuleFuture<T>: Future {
         self.runQueue = OperationQueue()
         self.semaphore = DispatchSemaphore(value: 1)
         
-        operationQueue.maxConcurrentOperationCount = OperationQueue.defaultMaxConcurrentOperationCount
+        operationQueue.maxConcurrentOperationCount = 3 //OperationQueue.defaultMaxConcurrentOperationCount
         operationQueue.qualityOfService = .utility
         
         runQueue.maxConcurrentOperationCount = 1
@@ -246,23 +246,20 @@ class ConcurrentClassRuleFuture<T>: Future {
         for (path, rule) in pathRequirements {
             let blockOperation = BlockOperation()
             blockOperation.addExecutionBlock {
+                guard let value = objectIn(json as AnyObject, atPath: path) else {
+                    requirementsError = RuleError.expectedNotFound("Unable to check the requirement, field \"\(path)\" not found in struct.", nil)
+                    return
+                }
                 
-                autoreleasepool {
-                    guard let value = objectIn(json as AnyObject, atPath: path) else {
-                        requirementsError = RuleError.expectedNotFound("Unable to check the requirement, field \"\(path)\" not found in struct.", nil)
-                        return
+                do {
+                    if !(try rule(value)) {
+                        requirementsError = RuleError.unmetRequirement("Requirement was not met for field \"\(path)\" with value \"\(value)\"", nil)
                     }
-                    
-                    do {
-                        if !(try rule(value)) {
-                            requirementsError = RuleError.unmetRequirement("Requirement was not met for field \"\(path)\" with value \"\(value)\"", nil)
-                        }
-                    } catch let err {
-                        switch err {
-                        case RuleError.unmetRequirement: requirementsError = err
-                        default:
-                            requirementsError = RuleError.unmetRequirement("Requirement was not met for field \"\(path)\" with value \"\(value)\"", err as? RuleError)
-                        }
+                } catch let err {
+                    switch err {
+                    case RuleError.unmetRequirement: requirementsError = err
+                    default:
+                        requirementsError = RuleError.unmetRequirement("Requirement was not met for field \"\(path)\" with value \"\(value)\"", err as? RuleError)
                     }
                 }
             }
@@ -278,25 +275,32 @@ class ConcurrentClassRuleFuture<T>: Future {
     fileprivate func validateMandatoryRules(_ outputValue: T, _ json: NSDictionary) throws {
         var mandatoryError: Error?
         
-        for (path, rule) in pathMandatoryRules {
-            let blockOperation = BlockOperation()
+        let amountOfOperations = operationQueue.maxConcurrentOperationCount
+        var blockOperation: BlockOperation!
+        for (index, (path, rule)) in pathMandatoryRules.enumerated() {
+            if index % amountOfOperations == 0 {
+                blockOperation = BlockOperation()
+            }
             blockOperation.addExecutionBlock {
-                autoreleasepool {
-                    guard let value = objectIn(json as AnyObject, atPath: path) else {
-                        mandatoryError = RuleError.expectedNotFound("Unable to validate \"\(json)\" as \(T.self). Mandatory field \"\(path)\" not found in struct.", nil)
-                        return
+                guard let value = objectIn(json as AnyObject, atPath: path) else {
+                    mandatoryError = RuleError.expectedNotFound("Unable to validate \"\(json)\" as \(T.self). Mandatory field \"\(path)\" not found in struct.", nil)
+                    return
+                }
+                
+                do {
+                    if let binding = try rule(value) {
+                        binding(outputValue)
                     }
-                    
-                    do {
-                        if let binding = try rule(value) {
-                            binding(outputValue)
-                        }
-                    } catch let err {
-                        mandatoryError = RuleError.invalidJSONType("Unable to validate mandatory field \"\(path)\" for \(T.self).", err as? RuleError)
-                    }
+                } catch let err {
+                    mandatoryError = RuleError.invalidJSONType("Unable to validate mandatory field \"\(path)\" for \(T.self).", err as? RuleError)
                 }
             }
-
+            if (index + 1) % amountOfOperations == 0 {
+                operationQueue.addOperation(blockOperation)
+                blockOperation = nil
+            }
+        }
+        if blockOperation != nil {
             operationQueue.addOperation(blockOperation)
         }
         operationQueue.waitUntilAllOperationsAreFinished()
@@ -308,23 +312,31 @@ class ConcurrentClassRuleFuture<T>: Future {
     
     fileprivate func validateOptionalRules(_ outputValue: T, _ json: NSDictionary) throws {
         var optionalError: Error?
-        for (path, rule) in pathOptionalRules {
-            let blockOperation = BlockOperation()
+        let amountOfOperations = operationQueue.maxConcurrentOperationCount
+        var blockOperation: BlockOperation!
+        for (index, (path, rule)) in pathOptionalRules.enumerated() {
+            if index % amountOfOperations == 0 {
+                blockOperation = BlockOperation()
+            }
             blockOperation.addExecutionBlock {
-                
-                autoreleasepool {
-                    let value = objectIn(json as AnyObject, atPath: path)
-                    do {
-                        if let binding = try rule(value) {
-                            binding(outputValue)
-                        }
-                    } catch let err {
-                        optionalError = RuleError.invalidJSONType("Unable to validate optional field \"\(path)\" for \(T.self).", err as? RuleError)
+                let value = objectIn(json as AnyObject, atPath: path)
+                do {
+                    if let binding = try rule(value) {
+                        binding(outputValue)
                     }
+                } catch let err {
+                    optionalError = RuleError.invalidJSONType("Unable to validate optional field \"\(path)\" for \(T.self).", err as? RuleError)
                 }
             }
+            if (index + 1) % amountOfOperations == 0 {
+                operationQueue.addOperation(blockOperation)
+                blockOperation = nil
+            }
+        }
+        if blockOperation != nil {
             operationQueue.addOperation(blockOperation)
         }
+        
         operationQueue.waitUntilAllOperationsAreFinished()
         
         if let optionalError = optionalError {
