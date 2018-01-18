@@ -50,7 +50,7 @@ func perform() {
     
     let concurrentArrayConcurrentItemRuleResult = measure {
         do {
-            let _ = try concurrentArrayConcurrentItemRule.validate(json)
+//            let _ = try concurrentArrayConcurrentItemRule.validate(json)
         } catch let error {
             print(error)
         }

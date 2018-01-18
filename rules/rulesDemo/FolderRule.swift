@@ -40,7 +40,7 @@ func performFolderExample() {
     
     let example4 = measure {
         do {
-            let _ = try storeArrayRule4.validate(json)
+//            let _ = try storeArrayRule4.validate(json)
         } catch let error {
             print(error)
         }
@@ -88,9 +88,9 @@ class Store {
 //// Example1: Usual object rules
 let fileClassRule = ClassRule(File())
     .expect("id", StringRule, { $0.id = $1 }) { $0.id }
-    .expect("name", StringRule, { $0.name = $1 }) { $0.name }
+    .optional("name", StringRule, { $0.name = $1 }) { $0.name }
     .optional("createdAt", Iso8601DateRule, { $0.createdAt = $1 })
-    .optional("updatedAt", Iso8601DateRule, { $0.updatedAt = $1 })
+    .expect("updatedAt", Iso8601DateRule, { $0.updatedAt = $1 })
 
 let folderClassRule = ClassRule(Folder())
     .expect("id", StringRule, { $0.id = $1 }) { $0.id }
@@ -103,8 +103,8 @@ let storeClassRule = ClassRule(Store())
     .expect("id", StringRule, { $0.id = $1 }) { $0.id }
     .expect("name", StringRule, { $0.name = $1 }) { $0.name }
     .expect("isActive", BoolRule, { $0.isActive = $1 }) { $0.isActive }
-    .expect("image", StringRule, { $0.image = $1 }) { $0.image }
-    .expect("files", ArrayRule(itemRule: fileClassRule), { $0.files = $1 }) { $0.files }
+    .optional("image", StringRule, { $0.image = $1 }) { $0.image }
+    .optional("files", ArrayRule(itemRule: fileClassRule), { $0.files = $1 }) { $0.files }
     .expect("folders", ArrayRule(itemRule: folderClassRule), { $0.folders = $1 }) { $0.folders }
     .expect("tags", ArrayRule(itemRule: StringRule), { $0.tags = $1.map { Tag(name: $0) }})
 
@@ -122,8 +122,8 @@ let storeClassRule2 = ClassRule(Store())
     .expect("id", StringRule, { $0.id = $1 }) { $0.id }
     .expect("name", StringRule, { $0.name = $1 }) { $0.name }
     .expect("isActive", BoolRule, { $0.isActive = $1 }) { $0.isActive }
-    .expect("image", StringRule, { $0.image = $1 }) { $0.image }
-    .expect("files", ArrayRule(itemRule: fileClassRule), { $0.files = $1 }) { $0.files }
+    .optional("image", StringRule, { $0.image = $1 }) { $0.image }
+    .optional("files", ArrayRule(itemRule: fileClassRule), { $0.files = $1 }) { $0.files }
     .expect("folders", ArrayRule(itemRule: folderClassRule2), { $0.folders = $1 }) { $0.folders }
     .expect("tags", ArrayRule(itemRule: StringRule), { $0.tags = $1.map { Tag(name: $0) }})
 
@@ -139,11 +139,11 @@ let folderClassRule3 = ClassRule(Folder())
 
 let storeClassRule3 = ConcurrentClassRule(Store())
     .expect("id", StringRule, { $0.id = $1 }) { $0.id }
-    .expect("files", ArrayRule(itemRule: fileClassRule), { $0.files = $1 }) { $0.files }
+    .optional("files", ArrayRule(itemRule: fileClassRule), { $0.files = $1 }) { $0.files }
     .expect("name", StringRule, { $0.name = $1 }) { $0.name }
     .expect("isActive", BoolRule, { $0.isActive = $1 }) { $0.isActive }
     .expect("folders", ArrayRule(itemRule: folderClassRule3), { $0.folders = $1 }) { $0.folders }
-    .expect("image", StringRule, { $0.image = $1 }) { $0.image }
+    .optional("image", StringRule, { $0.image = $1 }) { $0.image }
     .expect("tags", ArrayRule(itemRule: StringRule), { $0.tags = $1.map { Tag(name: $0) }})
 
 let storeArrayRule3 = ArrayRule(itemRule: storeClassRule3)
@@ -158,11 +158,11 @@ let folderClassRule4 = ClassRule(Folder())
 
 let storeClassRule4 = ConcurrentClassRule(Store())
     .expect("id", StringRule, { $0.id = $1 }) { $0.id }
-    .expect("files", ArrayRule(itemRule: fileClassRule), { $0.files = $1 }) { $0.files }
+    .optional("files", ArrayRule(itemRule: fileClassRule), { $0.files = $1 }) { $0.files }
     .expect("name", StringRule, { $0.name = $1 }) { $0.name }
     .expect("isActive", BoolRule, { $0.isActive = $1 }) { $0.isActive }
     .expect("folders", ArrayRule(itemRule: folderClassRule4), { $0.folders = $1 }) { $0.folders }
-    .expect("image", StringRule, { $0.image = $1 }) { $0.image }
+    .optional("image", StringRule, { $0.image = $1 }) { $0.image }
     .expect("tags", ArrayRule(itemRule: StringRule), { $0.tags = $1.map { Tag(name: $0) }})
 
 let storeArrayRule4 = ConcurrentArrayRule(itemRule: storeClassRule4)

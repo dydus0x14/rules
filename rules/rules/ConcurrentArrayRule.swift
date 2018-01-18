@@ -44,43 +44,6 @@ public class ConcurrentArrayRule<T, R: Rule>: Rule where R.V == T {
     public init(itemRule: R) {
         self.itemRule = itemRule
     }
-    
-    /**
-     Starts JSON array validation and returns Future if succeeded. Validation throws if jsonValue is not a JSON array.
-     
-     - parameter jsonValue: JSON array to be validated and converted into [T]
-     
-     - throws: throws RuleError
-     
-     - returns: Future object to get value or cancel execution.
-     */
-    open func startValidate<K: Future>(_ jsonValue: AnyObject) throws -> K where K.T == T {
-        guard let jsonArray = jsonValue as? NSArray else {
-            throw RuleError.invalidJSONType("Value of unexpected type found: \"\(jsonValue)\". Expected array of \(T.self).", nil)
-        }
-
-        let validator: (Any) throws->T = { [unowned self] jsonObject in
-            return try self.itemRule.validate(jsonObject as AnyObject)
-        }
-        
-        return ConcurrentArrayRuleFuture<NSArray, [T]>(jsonArray, validator) as! K
-    }
-    
-    /**
-     Starts array of AnyObject type dump.
-     
-     - parameter value: array with items of type T
-     
-     - throws: ?
-     
-     - returns: returns Future object to get result or cancel execution.
-     */
-    open func startDump<K: Future>(_ value: V) throws -> K where K.T == AnyObject {
-        let dump: (T) throws->AnyObject = { [unowned self] value in
-            return try self.itemRule.dump(value)
-        }
-        return ConcurrentArrayRuleFuture<[T], [AnyObject]>(value, dump) as! K
-    }
 
     // MARK:- Rule
     /**
@@ -97,11 +60,7 @@ public class ConcurrentArrayRule<T, R: Rule>: Rule where R.V == T {
             throw RuleError.invalidJSONType("Value of unexpected type found: \"\(jsonValue)\". Expected array of \(T.self).", nil)
         }
         
-        let validator: (Any) throws->T = { [unowned self] jsonObject in
-            return try self.itemRule.validate(jsonObject as AnyObject)
-        }
-        
-        return try ConcurrentArrayRuleFuture<NSArray, [T]>(jsonArray, validator).get()
+        return self.validate(input: jsonArray)
     }
 
     /**
@@ -114,78 +73,65 @@ public class ConcurrentArrayRule<T, R: Rule>: Rule where R.V == T {
      - returns: returns array of AnyObject, dumped by item rule
      */
     open func dump(_ value: V) throws -> AnyObject {
-        let dump: (T) throws->AnyObject = { [unowned self] value in
-            return try self.itemRule.dump(value)
-        }
-        return try ConcurrentArrayRuleFuture<[T], [AnyObject]>(value, dump).get() as AnyObject
+        return self.dump(input: value)
     }
 }
 
-
-/**
-    The executor of concurrent validation and dumping process. All items are run in async background queue.
-    To increase performance this implementation does not guarantee the order of the elements in the result array.
-    There is no error handling for failed items yet.
- */
-public class ConcurrentArrayRuleFuture<ICollection: Sequence, OCollection: Sequence>: Future {
+extension ConcurrentArrayRule {
     
-    public typealias T = [OCollection.Element]
-    
-    fileprivate var result = [OCollection.Element]()
-    fileprivate var error: Error?
-    fileprivate let operationQueue: OperationQueue
-    fileprivate let semaphore: DispatchSemaphore
-    public var isCancelled: Bool = false
-    public var isDone: Bool {
-        return operationQueue.operationCount == 0
-    }
-    
-    init(_ input: ICollection, _ itemExecutor: @escaping (ICollection.Element) throws->OCollection.Element) {
-        operationQueue = OperationQueue()
-        operationQueue.maxConcurrentOperationCount = 4 // OperationQueue.defaultMaxConcurrentOperationCount
-        operationQueue.qualityOfService = .utility
+    fileprivate func validate(input: NSArray) -> V {
+        let operationQueue = DispatchQueue(label: "", qos: .userInteractive, attributes: .concurrent)
+        let semaphore = DispatchSemaphore(value: 1)
+        let dispatchGroups = [DispatchGroup].init(repeating: DispatchGroup(), count: input.count)
+        var result = V()
         
-        semaphore = DispatchSemaphore(value: 1)
+        for (index, object) in input.enumerated() {
+            dispatchGroups[index].enter()
+            
+            operationQueue.async {
+                do {
+                    let value = try self.itemRule.validate(object as AnyObject)
+                    
+                    semaphore.wait()
+                    result.append(value)
+                    semaphore.signal()
+                } catch let error {
+                    print(error)
+                    // TODO: Handle error
+                }
+                dispatchGroups[index].leave()
+            }
+        }
         
-        perform(input, itemExecutor)
-    }
-    
-    public func get() throws -> T {
-        operationQueue.waitUntilAllOperationsAreFinished()
+        dispatchGroups.forEach { $0.wait() }
         return result
     }
     
-    public func cancel() {
-        isCancelled = true
-        operationQueue.cancelAllOperations()
-    }
-    
-    fileprivate func perform(_ input: ICollection, _ itemExecutor: @escaping (ICollection.Element) throws->OCollection.Element) {
-        let amountOfOperations = operationQueue.maxConcurrentOperationCount
-        var blockOperation: BlockOperation!
-    
+    fileprivate func dump(input: V) -> NSArray {
+        let operationQueue = DispatchQueue(label: "", qos: .userInteractive, attributes: .concurrent)
+        let semaphore = DispatchSemaphore(value: 1)
+        let dispatchGroups = [DispatchGroup].init(repeating: DispatchGroup(), count: input.count)
+        let result = NSMutableArray.init(capacity: input.count)
+        
         for (index, object) in input.enumerated() {
-            if index % amountOfOperations == 0 {
-                blockOperation = BlockOperation()
-            }
-            blockOperation.addExecutionBlock { [weak self] in
+            dispatchGroups[index].enter()
+            
+            operationQueue.async {
                 do {
-                    let value = try itemExecutor(object)
-                    self?.semaphore.wait()
-                    self?.result.append(value)
-                    self?.semaphore.signal()
+                    let value = try self.itemRule.dump(object)
+                    
+                    semaphore.wait()
+                    result.adding(value)
+                    semaphore.signal()
                 } catch let error {
                     print(error)
+                    // TODO: Handle error
                 }
-            }
-            if (index + 1) % amountOfOperations == 0 {
-                operationQueue.addOperation(blockOperation)
-                blockOperation = nil
+                dispatchGroups[index].leave()
             }
         }
         
-        if blockOperation != nil {
-            operationQueue.addOperation(blockOperation)
-        }
+        dispatchGroups.forEach { $0.wait() }
+        return result
     }
 }

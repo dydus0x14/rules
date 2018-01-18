@@ -105,7 +105,12 @@ class ConcurrentClassRule<T>: Rule {
             throw RuleError.invalidJSONType("Value of unexpected type found: \"\(jsonValue)\". Expected dictionary \(T.self).", nil)
         }
         
-        return try ConcurrentClassRuleFuture(objectFactory, json, pathRequirements, pathMandatoryRules, pathOptionalRules).get()
+        try validateRequirements(json)
+        let newStruct = objectFactory()
+        try validateMandatoryRules(newStruct, json)
+        try validateOptionalRules(newStruct, json)
+        
+        return newStruct
     }
     
     public func dump(_ value: V) throws -> AnyObject {
@@ -164,90 +169,21 @@ class ConcurrentClassRule<T>: Rule {
     }
 }
 
-class ConcurrentClassRuleFuture<T>: Future {
-    typealias V = T
-    
-    typealias LateBindClosure = (T) -> Void
-    typealias RuleClosure = (AnyObject) throws -> LateBindClosure?
-    typealias OptionalRuleClosure = (AnyObject?) throws -> LateBindClosure?
-    typealias RequirementClosure = (AnyObject) throws -> Bool
-    
-    fileprivate let objectFactory: ()->T
-    
-    fileprivate var pathRequirements = [(JSONPath, RequirementClosure)]()
-    
-    fileprivate var pathMandatoryRules = [(JSONPath, RuleClosure)]()
-    fileprivate var pathOptionalRules = [(JSONPath, OptionalRuleClosure)]()
-    
-    fileprivate let operationQueue: OperationQueue
-    fileprivate let runQueue: OperationQueue
-    fileprivate let semaphore: DispatchSemaphore
-    
-    fileprivate var resultError: Error?
-    fileprivate var result: T?
-    
-    var isCancelled: Bool { return true }
-    var isDone: Bool { return true }
-    
-    init(_ objectFactory: @escaping ()->T, _ jsonValue: NSDictionary, _ pathRequirements: [(JSONPath, RequirementClosure)], _ pathMandatoryRules: [(JSONPath, RuleClosure)],
-         _ pathOptionalRules: [(JSONPath, OptionalRuleClosure)]) {
-        
-        self.pathRequirements = pathRequirements
-        self.pathMandatoryRules = pathMandatoryRules
-        self.pathOptionalRules = pathOptionalRules
-        self.objectFactory = objectFactory
-        self.operationQueue = OperationQueue()
-        self.runQueue = OperationQueue()
-        self.semaphore = DispatchSemaphore(value: 1)
-        
-        operationQueue.maxConcurrentOperationCount = 3 //OperationQueue.defaultMaxConcurrentOperationCount
-        operationQueue.qualityOfService = .utility
-        
-        runQueue.maxConcurrentOperationCount = 1
-        runQueue.qualityOfService = .utility
-        
-        runQueue.addOperation {
-            self.perform(jsonValue)
-        }
-    }
-    
-    func get() throws -> T {
-        runQueue.waitUntilAllOperationsAreFinished()
-        if let result = result {
-            return result
-        }
-        
-        throw resultError ?? NSError(domain: "Unknown error", code: -1, userInfo: nil)
-    }
-    
-    func cancel() {
-        runQueue.cancelAllOperations()
-        operationQueue.cancelAllOperations()
-        
-        runQueue.waitUntilAllOperationsAreFinished()
-    }
-    
-    fileprivate func perform(_ json: NSDictionary) {
-        do {
-            try validateRequirements(json)
-            let newStruct = objectFactory()
-            try validateMandatoryRules(newStruct, json)
-            try validateOptionalRules(newStruct, json)
-            self.result = newStruct
-        
-        } catch let error {
-            resultError = error
-        }
-    }
+extension ConcurrentClassRule {
     
     fileprivate func validateRequirements(_ json: NSDictionary) throws {
+        let operationQueue = DispatchQueue(label: "", qos: .userInteractive, attributes: .concurrent)
+        let dispatchGroups = [DispatchGroup].init(repeating: DispatchGroup(), count: pathRequirements.count)
+        
         var requirementsError: Error?
         
-        for (path, rule) in pathRequirements {
-            let blockOperation = BlockOperation()
-            blockOperation.addExecutionBlock {
+        for (index, (path, rule)) in pathRequirements.enumerated() {
+            dispatchGroups[index].enter()
+            
+            operationQueue.async {
                 guard let value = objectIn(json as AnyObject, atPath: path) else {
                     requirementsError = RuleError.expectedNotFound("Unable to check the requirement, field \"\(path)\" not found in struct.", nil)
+                    dispatchGroups[index].leave()
                     return
                 }
                 
@@ -262,28 +198,29 @@ class ConcurrentClassRuleFuture<T>: Future {
                         requirementsError = RuleError.unmetRequirement("Requirement was not met for field \"\(path)\" with value \"\(value)\"", err as? RuleError)
                     }
                 }
+                dispatchGroups[index].leave()
             }
-            operationQueue.addOperation(blockOperation)
+            
         }
-        operationQueue.waitUntilAllOperationsAreFinished()
         
+        dispatchGroups.forEach { $0.wait() }
         if let requirementsError = requirementsError {
             throw requirementsError
         }
     }
     
     fileprivate func validateMandatoryRules(_ outputValue: T, _ json: NSDictionary) throws {
+        let operationQueue = DispatchQueue(label: "", qos: .userInteractive, attributes: .concurrent)
+        let dispatchGroups = [DispatchGroup].init(repeating: DispatchGroup(), count: pathMandatoryRules.count)
         var mandatoryError: Error?
         
-        let amountOfOperations = operationQueue.maxConcurrentOperationCount
-        var blockOperation: BlockOperation!
         for (index, (path, rule)) in pathMandatoryRules.enumerated() {
-            if index % amountOfOperations == 0 {
-                blockOperation = BlockOperation()
-            }
-            blockOperation.addExecutionBlock {
+            dispatchGroups[index].enter()
+            
+            operationQueue.async {
                 guard let value = objectIn(json as AnyObject, atPath: path) else {
                     mandatoryError = RuleError.expectedNotFound("Unable to validate \"\(json)\" as \(T.self). Mandatory field \"\(path)\" not found in struct.", nil)
+                    dispatchGroups[index].leave()
                     return
                 }
                 
@@ -294,31 +231,26 @@ class ConcurrentClassRuleFuture<T>: Future {
                 } catch let err {
                     mandatoryError = RuleError.invalidJSONType("Unable to validate mandatory field \"\(path)\" for \(T.self).", err as? RuleError)
                 }
-            }
-            if (index + 1) % amountOfOperations == 0 {
-                operationQueue.addOperation(blockOperation)
-                blockOperation = nil
+                dispatchGroups[index].leave()
             }
         }
-        if blockOperation != nil {
-            operationQueue.addOperation(blockOperation)
-        }
-        operationQueue.waitUntilAllOperationsAreFinished()
         
+        dispatchGroups.forEach { $0.wait() }
         if let requirementsError = mandatoryError {
             throw requirementsError
         }
     }
     
+    
     fileprivate func validateOptionalRules(_ outputValue: T, _ json: NSDictionary) throws {
+        let operationQueue = DispatchQueue(label: "", qos: .userInteractive, attributes: .concurrent)
+        let dispatchGroups = [DispatchGroup].init(repeating: DispatchGroup(), count: pathOptionalRules.count)
         var optionalError: Error?
-        let amountOfOperations = operationQueue.maxConcurrentOperationCount
-        var blockOperation: BlockOperation!
+        
         for (index, (path, rule)) in pathOptionalRules.enumerated() {
-            if index % amountOfOperations == 0 {
-                blockOperation = BlockOperation()
-            }
-            blockOperation.addExecutionBlock {
+            dispatchGroups[index].enter()
+            
+            operationQueue.async {
                 let value = objectIn(json as AnyObject, atPath: path)
                 do {
                     if let binding = try rule(value) {
@@ -327,18 +259,11 @@ class ConcurrentClassRuleFuture<T>: Future {
                 } catch let err {
                     optionalError = RuleError.invalidJSONType("Unable to validate optional field \"\(path)\" for \(T.self).", err as? RuleError)
                 }
-            }
-            if (index + 1) % amountOfOperations == 0 {
-                operationQueue.addOperation(blockOperation)
-                blockOperation = nil
+                dispatchGroups[index].leave()
             }
         }
-        if blockOperation != nil {
-            operationQueue.addOperation(blockOperation)
-        }
         
-        operationQueue.waitUntilAllOperationsAreFinished()
-        
+        dispatchGroups.forEach { $0.wait() }
         if let optionalError = optionalError {
             throw optionalError
         }
